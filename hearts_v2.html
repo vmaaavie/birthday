@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hearts Game</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1220;color:#eaf2f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+canvas{background:transparent;border:0;margin:0 auto;display:block;}
+.hud{display:flex;gap:16px;justify-content:center;margin:8px 0 0;font-weight:600}
+.touch-controls{display:none;margin:16px 0;gap:16px;justify-content:center}
+.touch-btn{padding:12px 20px;font-size:18px;border:0;border-radius:10px;background:#2E2E2E;color:white;font-weight:700;cursor:pointer;user-select:none}
+.touch-btn:hover{background:#181717}.touch-btn:active{transform:scale(0.95)}
+@media (max-width: 768px) {.touch-controls{display:flex}}
+
+/* Match Heart Clicker look */
+.wrap{max-width:720px;margin:0 auto;padding:12px}
+.hud{display:flex;gap:12px;justify-content:center;margin:8px 0 16px;font-weight:700}
+.btn{padding:10px 16px;font-weight:800;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:#b4a7d6;color:#111;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+#play{display:block;margin:0 auto 12px}
+#field{position:relative;height:420px;border-radius:16px;border:1px solid rgba(255,255,255,0.15);
+  background:linear-gradient(180deg,#0f172a,#111827);box-shadow:0 10px 40px rgba(0,0,0,0.3);display:grid;place-items:center}
+#stage{position:relative;display:grid;place-items:center}
+#banner{background:transparent;box-shadow:none;border-radius:0;padding:0;color:#fff;font-weight:800}
+/* end match */
+</style></head><body>
+<div class="wrap">
+<div class="hud"><div>score: <span id="sc">0</span></div><div>time: <span id="tm">30</span>s</div></div>
+
+<button id="play" class="btn" style="display:none">Play again</button>
+<div id="field">
+  <div id="stage">
+<canvas id="game" width="420" height="420"></canvas>
+<div id="banner">Time's over!</div>
+
+
+</div>
+</div>
+
+<div class="touch-controls">
+  <button class="touch-btn" id="leftBtn">⬅️ left</button>
+  <button class="touch-btn" id="rightBtn">➡️ right</button>
+</div>
+<script>
+(() => {
+  const store = { get coins(){ return parseInt(localStorage.getItem('ldg_coins')||'0',10) }, set coins(v){ localStorage.setItem('ldg_coins', String(v)) } };
+  function addCoins(n){ store.coins = Math.max(0, store.coins + n) }
+
+  const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d');
+  const leftBtn = document.getElementById('leftBtn'); const rightBtn = document.getElementById('rightBtn');
+  const restartBtn = document.getElementById('play');
+  const banner = document.getElementById('banner');
+
+  const BASKET_W = 60, BASKET_H = 60;
+  const player = { x: 180, y: 340, w: BASKET_W, h: BASKET_H, speed: 20 };
+
+  const basketImg = new Image(); basketImg.src = "basket.png";
+  const heartSources = ["blue-heart.png", "pink-heart.png"]; const heartImages = [];
+  let loadedCount = 0;
+  function tryStart(){ if (loadedCount === heartSources.length) startGame(); }
+  heartSources.forEach(src => { const img = new Image(); img.onload = ()=>{ loadedCount++; tryStart(); };
+    img.onerror = ()=>{ loadedCount++; tryStart(); }; img.src = src; heartImages.push(img); });
+
+  let hearts = [], score = 0, timeLeft = 30, gameOver = false;
+  let spawner = null, timer = null;
+  let loopStarted = false;
+
+  function startTimers(){
+    timer = setInterval(()=>{ 
+      if(timeLeft>0){ 
+        timeLeft--; 
+        document.getElementById('tm').textContent = timeLeft; 
+      } else { 
+        endGame("Time's over!"); 
+      } 
+    }, 1000);
+    spawner = setInterval(spawnHeart, 450);
+  }
+
+  function startGame(){
+    // hide end UI
+    banner.style.display = 'none';
+    restartBtn.style.display = 'none';
+    // start timers
+    startTimers();
+    // start render loop only once
+    if(!loopStarted){ loopStarted = true; loop(); }
+  }
+
+  function endGame(msg){ 
+    if(gameOver) return; 
+    gameOver = true; 
+    clearInterval(timer); timer = null;
+    clearInterval(spawner); spawner = null;
+    addCoins(score);
+    banner.textContent = msg || "Done!";
+    banner.style.display='block';
+    restartBtn.style.display='inline-block';
+  }
+
+  function resetGame(){
+    // clear any timers just in case
+    if(timer) { clearInterval(timer); timer = null; }
+    if(spawner) { clearInterval(spawner); spawner = null; }
+    // reset state
+    hearts = [];
+    score = 0;
+    timeLeft = 30;
+    gameOver = false;
+    player.x = 180;
+    document.getElementById('sc').textContent = '0';
+    document.getElementById('tm').textContent = String(timeLeft);
+    // restart timers
+    startTimers();
+  }
+
+  restartBtn.addEventListener('click', resetGame);
+
+  function spawnHeart(){ 
+    if(gameOver) return;
+    const available = heartImages.filter(i => i.complete && i.naturalWidth > 0);
+    const useImg = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : null;
+    hearts.push({ x: Math.random()* (canvas.width - 24), y: -24, vy: 1.6 + Math.random()*1.4, img: useImg });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (basketImg.complete && basketImg.naturalWidth > 0) { ctx.drawImage(basketImg, player.x, player.y, player.w, player.h);
+    } else { ctx.fillStyle = '#ffd966'; ctx.fillRect(player.x, player.y, player.w, player.h); }
+    hearts.forEach(h => {
+      if (h.img && h.img.complete && h.img.naturalWidth > 0) { ctx.drawImage(h.img, h.x, h.y, 24, 24);
+      } else { ctx.fillStyle = '#ff7ab5'; ctx.beginPath(); const r = 6;
+        ctx.arc(h.x+8, h.y+10, r, 0, Math.PI*2); ctx.arc(h.x+16, h.y+10, r, 0, Math.PI*2);
+        ctx.moveTo(h.x+22, h.y+12); ctx.lineTo(h.x+12, h.y+24); ctx.lineTo(h.x+2, h.y+12); ctx.closePath(); ctx.fill(); }
+    });
+    
+  }
+
+  function update(){
+    if(gameOver) return;
+    hearts.forEach(h => h.y += h.vy);
+    hearts = hearts.filter(h => {
+      if(h.y > canvas.height + 4) return false;
+      const cx = h.x + 12, cy = h.y + 12;
+      const withinX = cx > player.x && cx < player.x + player.w;
+      const withinY = cy > player.y && cy < player.y + player.h + 10;
+      if(withinX && withinY){ 
+        score++; 
+        document.getElementById('sc').textContent = score; 
+        if(score>=50) endGame('🎉 50 hearts collected!'); 
+        return false; 
+      }
+      return true;
+    });
+  }
+
+  function loop(){ update(); draw(); requestAnimationFrame(loop); }
+  function moveLeft(){ if(gameOver) return; player.x = Math.max(0, player.x - player.speed); }
+  function moveRight(){ if(gameOver) return; player.x = Math.min(canvas.width - player.w, player.x + player.speed); }
+
+  window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft'){ e.preventDefault(); moveLeft(); } if(e.key==='ArrowRight'){ e.preventDefault(); moveRight(); } }, {passive:false});
+  leftBtn.addEventListener('click', moveLeft); rightBtn.addEventListener('click', moveRight);
+  leftBtn.addEventListener('touchstart', e=>{e.preventDefault(); moveLeft();},{passive:false});
+  rightBtn.addEventListener('touchstart', e=>{e.preventDefault(); moveRight();},{passive:false});
+
+  // kick off once images load (or error)
+  if(loadedCount === heartSources.length){ startGame(); }
+})();
+</script>
+</div>
+</body></html>

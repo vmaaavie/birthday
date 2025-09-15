@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heart Clicker</title>
+  <style>
+    :root{--panel:#0b1220; --ink:#e5e7eb; --muted:#9ca3af}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1220;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:var(--ink)}
+    h2{margin:12px 0;text-align:center}
+    .wrap{max-width:720px;margin:0 auto;padding:12px}
+    .hud{display:flex;gap:12px;justify-content:center;margin:8px 0 16px;font-weight:700}
+    .btn{padding:10px 16px;font-weight:800;border:1px solid rgba(255,255,255,0.2);border-radius:12px;background:#b4a7d6;color:#111;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    #play{display:block;margin:0 auto 12px}
+    #field{position:relative;height:420px;border-radius:16px;border:1px solid rgba(255,255,255,0.15);background:linear-gradient(180deg,#0f172a,#111827)}
+    .heart{position:absolute;transform:translate(-50%,-50%);width:24px;height:24px;filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));}
+    .float{position:absolute;font-weight:800;color:#ff7ab5;opacity:0;animation:pop 700ms ease forwards;text-shadow:0 1px 0 #000}
+    @keyframes pop{from{transform:translateY(0);opacity:.9}to{transform:translateY(-22px);opacity:0}}
+    p.note{color:var(--muted);text-align:center;margin:6px 0}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h2>💖 Heart Clicker</h2>
+  <div class="hud"><div>⏱️ Time: <span id="time">15</span>s</div><div>🎯 Score: <span id="score">0</span></div></div>
+  <button id="play" class="btn">Start round</button>
+  <div id="field" aria-label="playfield"></div>
+  <p id="done" class="note" style="display:none"></p>
+</div>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const heartSources = ['blue-heart.png','pink-heart.png']; const imgs=[]; heartSources.forEach(src=>{ const im=new Image(); im.src=src; imgs.push(im); });
+  const store = { get coins(){ return parseInt(localStorage.getItem('ldg_coins')||'0',10) }, set coins(v){ localStorage.setItem('ldg_coins', String(v)) } };
+  function addCoins(n){ store.coins = Math.max(0, store.coins + n) }
+
+  const field = $('#field'); const start = $('#play'); const scoreEl = $('#score'); const timeEl = $('#time'); const done = $('#done');
+  let running=false, score=0, t=15, tick=null, spawner=null;
+
+  function spawn(){ const h = document.createElement('img'); h.className='heart'; const pick = imgs.find(im=>im.complete && im.naturalWidth>0); if(pick){ h.src = pick.src; } else { h.remove(); const d=document.createElement('div'); d.className='heart'; d.textContent='❤'; d.style.fontSize = '18px'; field.appendChild(d); return; }
+    const x = 16 + Math.random() * (field.clientWidth - 32); const y = 16 + Math.random() * (field.clientHeight - 32);
+    const size = 18 + Math.random()*10; h.style.width = size + 'px'; h.style.height = size + 'px';
+    h.style.left = x + 'px'; h.style.top = y + 'px';
+    h.addEventListener('pointerdown', ()=>{ if(!running) return; score++; scoreEl.textContent = score; h.remove();
+      const f = document.createElement('div'); f.className='float'; f.textContent='+1'; f.style.left=x+'px'; f.style.top=y+'px'; field.appendChild(f); setTimeout(()=>f.remove(), 680); }, {passive:true});
+    field.appendChild(h); setTimeout(()=>h.remove(), 1800);
+  }
+
+  function startRound(){ if(running) return;
+    running = true; score = 0; t = 15; scoreEl.textContent = '0'; timeEl.textContent = t; done.style.display='none';
+    document.querySelectorAll('.heart').forEach(e=>e.remove());
+    tick = setInterval(()=>{ t--; timeEl.textContent = t; if(t<=0) endRound(); }, 1000);
+    spawner = setInterval(spawn, 420); start.disabled = true; }
+  function endRound(){ running=false; clearInterval(tick); clearInterval(spawner); addCoins(score);
+    done.textContent = `Round finished! You earned ${score} coin${score!==1?'s':''}.`; done.style.display='block'; start.disabled = false; start.textContent = 'Play again'; }
+  start.addEventListener('click', startRound);
+})();
+</script>
+</body></html>

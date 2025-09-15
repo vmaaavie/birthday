@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>💌 letters</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg:#031628; --paper:#fff; --text:#374151;
+    --wrap:#f5edd1; --flap:#ecdeb8; --body:#e6cfa7;
+    --accent:#f59e0b; --btn:#fbbf24; --btn-hover:#fcd34d;
+    --seal:#541717;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+  header{max-width:1100px;margin:24px auto 8px;padding:0 16px}
+  h1{margin:0 0 10px}
+  .meta{opacity:.9;margin:0 0 10px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{padding:10px 14px;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn.primary{background:#000000;color:#fff}
+  .btn.primary:hover{background:#000000}
+  .btn.light{background:#f3f4f6;color:#111}
+
+  /* Grid */
+  .grid{
+    max-width:1100px; margin:18px auto 48px; padding:0 16px;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+    gap:20px;
+  }
+
+  /* Karte */
+  .card{
+    background:var(--wrap);
+    border:2px solid var(--accent);
+    border-radius:14px;
+    padding:16px;
+    color:#111;
+    display:flex; 
+    flex-direction:column;
+    gap:16px;
+    transition:opacity .2s ease;
+    min-height:280px;
+  }
+  .card.locked{opacity:.4; filter:grayscale(50%)}
+
+  /* Umschlag Container */
+  .envelope{
+    position:relative;
+    width: 100%;
+    height:180px;
+    background:var(--body);
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 4px 8px rgba(0,0,0,.15);
+  }
+
+  /* Brief-Inhalt - versteckt bis geöffnet */
+  .letter{
+    position:absolute;
+    top:15px; left:15px; right:15px; bottom:15px;
+    background:var(--paper);
+    color:var(--text);
+    border-radius:6px;
+    padding:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+    z-index:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    opacity:0;
+    transform:scale(0.8);
+    transition:all 0.5s ease;
+  }
+  .letter p{
+    margin:0;
+    font-size:14px;
+    line-height:1.5;
+  }
+
+  /* Umschlag-Körper */
+  .envelope-body{
+    position:absolute;
+    top:80px; left:0; right:0; bottom:0;
+    background:var(--body);
+    border-radius:0 0 10px 10px;
+    z-index:2;
+    transition:transform 0.6s ease;
+  }
+
+  /* Umschlag-Klappe mit Siegel */
+  .envelope-flap{
+    position:absolute;
+    top:0; left:0; right:0;
+    height:100px;
+    background:var(--flap);
+    clip-path:polygon(0% 0%, 100% 0%, 50% 80%);
+    z-index:3;
+    transition:transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transform-origin:top center;
+  }
+
+  /* Herz-Siegel auf der Klappe */
+  .seal{
+    position:absolute;
+    top:65px;
+    left:50%;
+    width:22px;
+    height:22px;
+    background:var(--seal);
+    transform:translate(-50%, -50%) rotate(45deg);
+    border-radius:3px 0;
+    box-shadow:0 3px 8px rgba(251, 24, 227, 0.6);
+  }
+  .seal::before,
+  .seal::after {
+    content:'';
+    position:absolute;
+    width:22px;
+    height:22px;
+    background:var(--seal);
+    border-radius:50%;
+  }
+  .seal::before { top:-11px; left:0; }
+  .seal::after { top:0; left:-11px; }
+
+  /* Geöffneter Zustand */
+  .card.opened .envelope-flap{
+    transform:rotateX(-180deg);
+  }
+  .card.opened .envelope-body{
+    transform:translateY(100%);
+  }
+  .card.opened .letter{
+    opacity:1;
+    transform:scale(1);
+    transition-delay:0.4s;
+  }
+
+  /* Footer */
+  .card-footer{
+    display:flex; 
+    gap:12px; 
+    align-items:center; 
+    justify-content:space-between;
+  }
+  .card-title{
+    margin:0; 
+    font-size:16px; 
+    font-weight:800; 
+    color:#111;
+    display:flex; 
+    align-items:center; 
+    gap:8px;
+  }
+  .badge{
+    font-size:11px; 
+    font-weight:700; 
+    color:#111;
+    background:#fde68a; 
+    border:1px dashed var(--accent);
+    padding:3px 8px; 
+    border-radius:12px;
+  }
+  .toggle-btn{
+    padding:8px 12px;
+    border:0; 
+    border-radius:8px; 
+    font-weight:700; 
+    cursor:pointer;
+    background:var(--btn);
+    font-size:13px;
+    transition:all .2s ease;
+  }
+  .toggle-btn:hover:not(:disabled){
+    background:var(--btn-hover);
+    transform:translateY(-1px);
+  }
+  .toggle-btn:disabled{opacity:0.5; cursor:not-allowed; background:#999;}
+
+  @media (max-width: 768px) {
+    .grid{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<style>
+:root{
+  --ink:#e5e7eb; --muted:#9ca3af;
+  --panel:rgba(255,255,255,0.06); --border:rgba(255,255,255,0.12);
+}
+body{background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+.topnav{position:sticky;top:0;z-index:10;backdrop-filter:blur(10px);background:rgba(255,255,255,0.06);border-bottom:1px solid var(--border)}
+.topnav .wrap{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.topnav .links{display:flex;gap:10px;flex-wrap:wrap}
+.topnav .links a{display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);text-decoration:none;color:#e5e7eb;background:rgba(0,0,0,0.25);font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.2);font-weight:700;color:#e5e7eb}
+</style>
+
+</head>
+<body>
+
+<header class="topnav">
+  <div class="wrap">
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <a href="minigames.html">Minigames</a>
+      <a href="quests.html">Quests</a>
+      <a href="shop.html">Shop</a>
+    </nav>
+    <div class="pill">🪙 Coins: <span id="coinCount">0</span></div>
+  </div>
+</header>
+
+
+<header>
+  <h1>💌 𝐋𝐞𝐭𝐭𝐞𝐫𝐬 𝐟𝐨𝐫 𝐲𝐨𝐮 <𝟑</h1>
+  <div class="meta" id="meta">–</div>
+  <div class="actions">
+    <button id="reset" class="btn light">reset progress</button>
+  </div>
+</header>
+
+<section class="grid" id="grid"></section>
+
+
+<script>
+(() => {
+  // --- Shared store ---
+  const store = {
+    get coins(){ return parseInt(localStorage.getItem('ldg_coins')||'0',10) },
+    set coins(v){ localStorage.setItem('ldg_coins', String(v)); const hud=document.getElementById('coinCount'); if(hud) hud.textContent=String(v); },
+    get purchases(){ return JSON.parse(localStorage.getItem('ldg_purchases')||'{}') },
+    set purchases(v){ localStorage.setItem('ldg_purchases', JSON.stringify(v)) },
+  };
+  function buy(id, price){ if(store.coins < price) return false; const p=store.purchases; store.coins = store.coins - price; p[id]=true; store.purchases=p; return true; }
+  function owns(id){ return !!store.purchases[id]; }
+
+  const LETTER_PRICE = 15;
+  const MESSAGES = [
+    "𝐰𝐢𝐭𝐡 𝐲𝐨𝐮, 𝐞𝐯𝐞𝐫𝐲𝐭𝐡𝐢𝐧𝐠 𝐢𝐧 𝐥𝐢𝐟𝐞 𝐟𝐞𝐞𝐥𝐬 𝐬𝐨 𝐦𝐮𝐜𝐡 𝐞𝐚𝐬𝐢𝐞𝐫","𝐲𝐨𝐮𝐫𝐞 𝐭𝐡𝐞 𝐫𝐞𝐚𝐬𝐨𝐧 𝐞𝐯𝐞𝐧 𝐝𝐢𝐟𝐟𝐢𝐜𝐮𝐥𝐭 𝐝𝐚𝐲𝐬 𝐟𝐞𝐞𝐥 𝐩𝐨𝐬𝐬𝐢𝐛𝐥𝐞","𝐲𝐨𝐮𝐫 𝐩𝐫𝐞𝐬𝐞𝐧𝐜𝐞 𝐟𝐞𝐞𝐥𝐬 𝐥𝐢𝐤𝐞 𝐚 𝐡𝐨𝐦𝐞 𝐢 𝐧𝐞𝐯𝐞𝐫 𝐰𝐚𝐧𝐭 𝐭𝐨 𝐥𝐞𝐚𝐯𝐞","𝐲𝐨𝐮 𝐦𝐚𝐤𝐞 𝐥𝐢𝐟𝐞 𝐬𝐰𝐞𝐞𝐭𝐞𝐫 𝐣𝐮𝐬𝐭 𝐛𝐲 𝐞𝐱𝐢𝐬𝐭𝐢𝐧𝐠","𝐢𝐦 𝐬𝐨 𝐠𝐥𝐚𝐝 𝐢 𝐠𝐞𝐭 𝐭𝐨 𝐥𝐨𝐯𝐞 𝐲𝐨𝐮","𝐰𝐡𝐞𝐧 𝐢 𝐥𝐨𝐨𝐤 𝐚𝐭 𝐲𝐨𝐮, 𝐦𝐲 𝐡𝐞𝐚𝐫𝐭 𝐟𝐞𝐞𝐥𝐬 𝐥𝐢𝐤𝐞 𝐚 𝐟𝐢𝐫𝐞𝐰𝐨𝐫𝐤","𝐞𝐯𝐞𝐧 𝐢𝐧 𝐦𝐲 𝐝𝐫𝐞𝐚𝐦𝐬, 𝐢 𝐥𝐨𝐨𝐤 𝐟𝐨𝐫 𝐲𝐨𝐮","𝐢 𝐰𝐨𝐮𝐥𝐝 𝐜𝐡𝐨𝐨𝐬𝐞 𝐲𝐨𝐮𝐫 𝐩𝐫𝐞𝐬𝐞𝐧𝐜𝐞 𝐨𝐯𝐞𝐫 𝐚𝐧𝐲 𝐩𝐞𝐫𝐟𝐞𝐜𝐭 𝐩𝐥𝐚𝐜𝐞","𝐲𝐨𝐮𝐫𝐞 𝐦𝐲 𝐟𝐚𝐯𝐨𝐫𝐢𝐭𝐞 𝐩𝐚𝐫𝐭 𝐨𝐟 𝐞𝐯𝐞𝐫𝐲 𝐝𝐚𝐲","𝐢 𝐝𝐨𝐧𝐭 𝐣𝐮𝐬𝐭 𝐥𝐨𝐯𝐞 𝐰𝐡𝐚𝐭 𝐲𝐨𝐮 𝐝𝐨 𝐟𝐨𝐫 𝐦𝐞, 𝐢 𝐥𝐨𝐯𝐞 𝐰𝐡𝐨 𝐲𝐨𝐮 𝐚𝐫𝐞",
+    "𝐛𝐞𝐢𝐧𝐠 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮 𝐜𝐨𝐮𝐥𝐝 𝐧𝐞𝐯𝐞𝐫 𝐛𝐞 𝐚 𝐰𝐚𝐬𝐭𝐞 𝐨𝐟 𝐭𝐢𝐦𝐞","𝐞𝐯𝐞𝐫𝐲 𝐭𝐢𝐦𝐞 𝐲𝐨𝐮 𝐬𝐦𝐢𝐥𝐞 𝐚𝐭 𝐦𝐞, 𝐢 𝐟𝐞𝐞𝐥 𝐥𝐢𝐤𝐞 𝐭𝐡𝐞 𝐥𝐮𝐜𝐤𝐢𝐞𝐬𝐭 𝐩𝐞𝐫𝐬𝐨𝐧 𝐚𝐥𝐢𝐯𝐞","𝐞𝐯𝐞𝐧 𝐨𝐧 𝐜𝐥𝐨𝐮𝐝𝐲 𝐝𝐚𝐲𝐬, 𝐲𝐨𝐮𝐫𝐞 𝐦𝐲 𝐬𝐮𝐧𝐬𝐡𝐢𝐧𝐞","𝐢 𝐰𝐨𝐮𝐥𝐝 𝐬𝐞𝐚𝐫𝐜𝐡 𝐟𝐨𝐫 𝐲𝐨𝐮𝐫 𝐬𝐨𝐮𝐥 𝐢𝐧 𝐚𝐧𝐲 𝐥𝐢𝐟𝐞𝐭𝐢𝐦𝐞","𝐲𝐨𝐮 𝐚𝐫𝐞 𝐭𝐡𝐞 𝐜𝐚𝐥𝐦 𝐢𝐧 𝐦𝐲 𝐬𝐭𝐨𝐫𝐦𝐬 𝐚𝐧𝐝 𝐭𝐡𝐞 𝐥𝐢𝐠𝐡𝐭 𝐢𝐧 𝐦𝐲 𝐝𝐚𝐫𝐤𝐧𝐞𝐬𝐬","𝐭𝐡𝐢𝐧𝐤𝐢𝐧𝐠 𝐨𝐟 𝐲𝐨𝐮 𝐦𝐚𝐤𝐞𝐬 𝐦𝐲 𝐡𝐞𝐚𝐫𝐭 𝐦𝐞𝐥𝐭","𝐞𝐯𝐞𝐫𝐲 𝐭𝐢𝐦𝐞 𝐈 𝐬𝐞𝐞 𝐲𝐨𝐮, 𝐢 𝐟𝐚𝐥𝐥 𝐢𝐧 𝐥𝐨𝐯𝐞 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮 𝐚𝐠𝐚𝐢𝐧","𝐢𝐟 𝐲𝐨𝐮𝐫 𝐯𝐨𝐢𝐜𝐞 𝐰𝐚𝐬 𝐚 𝐬𝐨𝐧𝐠, 𝐢 𝐰𝐨𝐮𝐥𝐝 𝐥𝐢𝐬𝐭𝐞𝐧 𝐭𝐨 𝐢𝐭 𝐨𝐧 𝐫𝐞𝐩𝐞𝐚𝐭 𝐟𝐨𝐫 𝐭𝐡𝐞 𝐫𝐞𝐬𝐭 𝐨𝐟 𝐦𝐲 𝐥𝐢𝐟𝐞","𝐲𝐨𝐮𝐫𝐞 𝐭𝐡𝐞 𝐟𝐢𝐫𝐬𝐭 𝐩𝐞𝐫𝐬𝐨𝐧 𝐰𝐡𝐨 𝐡𝐚𝐬 𝐞𝐯𝐞𝐫 𝐦𝐚𝐝𝐞 𝐦𝐞 𝐟𝐞𝐞𝐥 𝐭𝐫𝐮𝐥𝐲 𝐥𝐨𝐯𝐞𝐝","𝐲𝐨𝐮 𝐦𝐚𝐤𝐞 𝐨𝐫𝐝𝐢𝐧𝐚𝐫𝐲 𝐦𝐨𝐦𝐞𝐧𝐭𝐬 𝐞𝐱𝐭𝐫𝐚𝐨𝐫𝐝𝐢𝐧𝐚𝐫𝐲 𝐣𝐮𝐬𝐭 𝐛𝐲 𝐛𝐞𝐢𝐧𝐠 𝐢𝐧 𝐭𝐡𝐞𝐦",
+    "𝐚𝐥𝐥 𝐲𝐨𝐮𝐫 𝐟𝐮𝐧𝐧𝐲 𝐚𝐧𝐝 𝐚𝐮𝐭𝐢𝐬𝐭𝐢𝐜 𝐦𝐨𝐦𝐞𝐧𝐭𝐬 𝐦𝐚𝐤𝐞 𝐲𝐨𝐮 𝐞𝐯𝐞𝐧 𝐦𝐨𝐫𝐞 𝐥𝐨𝐯𝐞𝐚𝐛𝐥𝐞 𝐭𝐨 𝐦𝐞","𝐞𝐯𝐞𝐧 𝐢𝐟 𝐲𝐨𝐮 𝐝𝐢𝐝 𝐧𝐨𝐭𝐡𝐢𝐧𝐠 𝐚𝐭 𝐚𝐥𝐥, 𝐲𝐨𝐮 𝐰𝐨𝐮𝐥𝐝 𝐬𝐭𝐢𝐥𝐥 𝐛𝐞 𝐚𝐦𝐚𝐳𝐢𝐧𝐠, 𝐣𝐮𝐬𝐭 𝐛𝐞𝐜𝐚𝐮𝐬𝐞 𝐲𝐨𝐮 𝐚𝐫𝐞 𝐲𝐨𝐮","𝐞𝐯𝐞𝐧 𝐨𝐧 𝐦𝐲 𝐡𝐚𝐩𝐩𝐢𝐞𝐬𝐭 𝐝𝐚𝐲𝐬, 𝐲𝐨𝐮𝐫𝐞 𝐬𝐭𝐢𝐥𝐥 𝐭𝐡𝐞 𝐛𝐞𝐬𝐭 𝐩𝐚𝐫𝐭 𝐨𝐟 𝐭𝐡𝐞𝐦","𝐛𝐞𝐢𝐧𝐠 𝐥𝐨𝐯𝐞𝐝 𝐛𝐲 𝐲𝐨𝐮 𝐢𝐬 𝐭𝐡𝐞 𝐛𝐞𝐬𝐭 𝐠𝐢𝐟𝐭 𝐥𝐢𝐟𝐞 𝐡𝐚𝐬 𝐞𝐯𝐞𝐫 𝐠𝐢𝐯𝐞𝐧 𝐦𝐞","𝐛𝐞𝐢𝐧𝐠 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮 𝐦𝐚𝐤𝐞𝐬 𝐦𝐞 𝐟𝐞𝐞𝐥 𝐬𝐚𝐟𝐞 𝐢𝐧 𝐭𝐡𝐢𝐬 𝐜𝐡𝐚𝐨𝐭𝐢𝐜 𝐰𝐨𝐫𝐥𝐝","𝐲𝐨𝐮𝐫 𝐥𝐚𝐮𝐠𝐡 𝐚𝐧𝐝 𝐭𝐡𝐚𝐭 𝐥𝐢𝐭𝐭𝐥𝐞 𝐠𝐢𝐠𝐠𝐥𝐞 𝐚𝐫𝐞 𝐥𝐢𝐤𝐞 𝐦𝐮𝐬𝐢𝐜 𝐭𝐨 𝐦𝐲 𝐬𝐨𝐮𝐥","𝐞𝐯𝐞𝐫𝐲 𝐧𝐢𝐠𝐡𝐭 𝐰𝐡𝐞𝐧 𝐢 𝐠𝐨 𝐭𝐨 𝐛𝐞𝐝, 𝐢 𝐡𝐨𝐩𝐞 𝐭𝐡𝐚𝐭 𝐢 𝐝𝐫𝐞𝐚𝐦 𝐨𝐟 𝐲𝐨𝐮","𝐰𝐞 𝐜𝐨𝐮𝐥𝐝 𝐬𝐢𝐭 𝐢𝐧 𝐬𝐢𝐥𝐞𝐧𝐜𝐞 𝐟𝐨𝐫 𝐡𝐨𝐮𝐫𝐬 𝐚𝐧𝐝 𝐢 𝐰𝐨𝐮𝐥𝐝 𝐬𝐭𝐢𝐥𝐥 𝐚𝐩𝐩𝐫𝐞𝐜𝐢𝐚𝐭𝐞 𝐞𝐯𝐞𝐫𝐲 𝐬𝐞𝐜𝐨𝐧𝐝","𝐢 𝐚𝐦 𝐧𝐞𝐯𝐞𝐫 𝐧𝐨𝐭 𝐭𝐡𝐢𝐧𝐤𝐢𝐧𝐠 𝐚𝐛𝐨𝐮𝐭 𝐲𝐨𝐮, 𝐲𝐨𝐮𝐫𝐞 𝐚𝐥𝐰𝐚𝐲𝐬 𝐨𝐧 𝐦𝐲 𝐦𝐢𝐧𝐝","𝐡𝐞𝐚𝐫𝐢𝐧𝐠 𝐲𝐨𝐮𝐫 𝐯𝐨𝐢𝐜𝐞 𝐟𝐞𝐞𝐥𝐬 𝐥𝐢𝐤𝐞 𝐚 𝐰𝐚𝐫𝐦 𝐬𝐮𝐦𝐦𝐞𝐫 𝐛𝐫𝐞𝐞𝐳𝐞",
+    "𝐢 𝐰𝐢𝐥𝐥 𝐧𝐞𝐯𝐞𝐫 𝐬𝐭𝐨𝐩 𝐛𝐞𝐢𝐧𝐠 𝐠𝐫𝐚𝐭𝐞𝐟𝐮𝐥 𝐟𝐨𝐫 𝐲𝐨𝐮. 𝐧𝐨𝐭 𝐣𝐮𝐬𝐭 𝐟𝐨𝐫 𝐰𝐡𝐚𝐭 𝐲𝐨𝐮 𝐝𝐨, 𝐛𝐮𝐭 𝐟𝐨𝐫 𝐰𝐡𝐨 𝐲𝐨𝐮 𝐚𝐫𝐞","𝐢𝐟 𝐬𝐨𝐮𝐥𝐬 𝐰𝐞𝐫𝐞 𝐬𝐭𝐚𝐫𝐬, 𝐲𝐨𝐮𝐫𝐬 𝐰𝐨𝐮𝐥𝐝 𝐛𝐞 𝐭𝐡𝐞 𝐨𝐧𝐞 𝐛𝐫𝐢𝐠𝐡𝐭𝐞𝐬𝐭 𝐨𝐧𝐞 𝐢𝐧 𝐭𝐡𝐞 𝐧𝐢𝐠𝐡𝐭 𝐬𝐤𝐲","𝐞𝐯𝐞𝐫𝐲 𝐩𝐚𝐫𝐭 𝐨𝐟 𝐲𝐨𝐮 𝐢𝐬 𝐰𝐨𝐫𝐭𝐡 𝐥𝐨𝐯𝐢𝐧𝐠, 𝐟𝐫𝐨𝐦 𝐲𝐨𝐮𝐫 𝐯𝐨𝐢𝐜𝐞 𝐭𝐨 𝐲𝐨𝐮𝐫 𝐬𝐦𝐢𝐥𝐞 𝐭𝐨 𝐲𝐨𝐮𝐫 𝐬𝐨𝐮𝐥","𝐲𝐨𝐮𝐫 𝐬𝐦𝐢𝐥𝐞 𝐢𝐬 𝐩𝐮𝐫𝐞 𝐬𝐮𝐧𝐬𝐡𝐢𝐧𝐞 𝐭𝐨 𝐦𝐞","𝐲𝐨𝐮𝐫 𝐞𝐱𝐢𝐬𝐭𝐞𝐧𝐜𝐞 𝐚𝐥𝐨𝐧𝐞 𝐦𝐚𝐤𝐞𝐬 𝐦𝐲 𝐥𝐢𝐟𝐞 𝐛𝐫𝐢𝐠𝐡𝐭𝐞𝐫","𝐞𝐯𝐞𝐧 𝐭𝐡𝐞 𝐬𝐦𝐚𝐥𝐥𝐞𝐬𝐭 𝐦𝐨𝐦𝐞𝐧𝐭𝐬 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮 𝐟𝐞𝐞𝐥 𝐥𝐢𝐤𝐞 𝐚 𝐦𝐞𝐦𝐨𝐫𝐲 𝐭𝐡𝐚𝐭𝐬 𝐰𝐨𝐫𝐭𝐡 𝐤𝐞𝐞𝐩𝐢𝐧𝐠 𝐟𝐨𝐫𝐞𝐯𝐞𝐫","𝐭𝐡𝐞 𝐰𝐚𝐲 𝐲𝐨𝐮 𝐚𝐫𝐞 𝐢𝐬 𝐦𝐨𝐫𝐞 𝐭𝐡𝐚𝐧 𝐢 𝐜𝐨𝐮𝐥𝐝 𝐞𝐯𝐞𝐫 𝐝𝐫𝐞𝐚𝐦 𝐨𝐟",
+    "𝐲𝐨𝐮 𝐠𝐢𝐯𝐞 𝐦𝐞 𝐡𝐚𝐩𝐩𝐢𝐧𝐞𝐬𝐬 𝐢 𝐭𝐡𝐨𝐮𝐠𝐡𝐭 𝐢 𝐜𝐨𝐮𝐥𝐝 𝐨𝐧𝐥𝐲 𝐡𝐚𝐯𝐞 𝐚𝐬 𝐚 𝐤𝐢𝐝","𝐲𝐨𝐮 𝐚𝐫𝐞 𝐭𝐡𝐞 𝐛𝐞𝐬𝐭 𝐝𝐞𝐜𝐢𝐬𝐢𝐨𝐧 𝐦𝐲 𝐡𝐞𝐚𝐫𝐭 𝐞𝐯𝐞𝐫 𝐦𝐚𝐝𝐞","𝐢𝐟 𝐚𝐧𝐲𝐨𝐧𝐞 𝐚𝐬𝐤𝐞𝐝 𝐦𝐞 𝐚𝐛𝐨𝐮𝐭 𝐥𝐨𝐯𝐞, 𝐢 𝐰𝐨𝐮𝐥𝐝 𝐭𝐞𝐥𝐥 𝐭𝐡𝐞𝐦 𝐚𝐛𝐨𝐮𝐭 𝐲𝐨𝐮"
+  ];
+
+  const grid = document.getElementById('grid');
+  const meta = document.getElementById('meta');
+
+  function countUnlocked(){
+    const p = store.purchases; let cnt=0; for(const k in p){ if(k.startsWith('letter-') && p[k]) cnt++; } return cnt;
+  }
+
+  function updateMeta(){
+    const cnt = countUnlocked();
+    if(meta) meta.textContent = `unlocked: ${Math.min(cnt, MESSAGES.length)} / ${MESSAGES.length} (Score: ${cnt})`;
+  }
+
+  function render(){
+    grid.innerHTML='';
+    MESSAGES.forEach((message, index) => {
+      const id = `letter-${index+1}`; const isUnlocked = owns(id);
+
+      const card = document.createElement('div');
+      card.className = 'card' + (isUnlocked ? '' : ' locked');
+
+      const envelope = document.createElement('div'); envelope.className = 'envelope';
+      const letter = document.createElement('div'); letter.className = 'letter';
+      const letterText = document.createElement('p'); letterText.textContent = message; letter.appendChild(letterText);
+      const envelopeBody = document.createElement('div'); envelopeBody.className = 'envelope-body';
+      const envelopeFlap = document.createElement('div'); envelopeFlap.className = 'envelope-flap';
+      const seal = document.createElement('div'); seal.className = 'seal'; envelopeFlap.appendChild(seal);
+      envelope.appendChild(letter); envelope.appendChild(envelopeBody); envelope.appendChild(envelopeFlap);
+
+      const footer = document.createElement('div'); footer.className = 'card-footer';
+      const title = document.createElement('h3'); title.className = 'card-title';
+      const badge = `<span class="badge">${isUnlocked ? 'unlocked' : 'locked'}</span>`;
+      title.innerHTML = `letter ${index + 1} ${badge}`;
+
+      const button = document.createElement('button'); button.className = 'toggle-btn';
+
+      function makeOpenButton(){
+        button.textContent = 'open';
+        button.disabled = false;
+        let isOpen = false;
+        button.onclick = () => {
+          isOpen = !isOpen;
+          if (isOpen) { card.classList.add('opened'); button.textContent = 'close'; }
+          else { card.classList.remove('opened'); button.textContent = 'open'; }
+        };
+      }
+
+      if (!isUnlocked) {
+        button.textContent = `buy (🪙 ${LETTER_PRICE})`;
+        button.disabled = store.coins < LETTER_PRICE;
+        button.onclick = () => {
+          if (buy(id, LETTER_PRICE)) {
+            // Unlock UI
+            card.classList.remove('locked');
+            title.innerHTML = `letter ${index + 1} <span class="badge">unlocked</span>`;
+            makeOpenButton();
+            updateMeta();
+          } else {
+            // still not enough coins; keep disabled state updated
+            button.disabled = true;
+          }
+        };
+      } else {
+        makeOpenButton();
+      }
+
+      footer.appendChild(title);
+      footer.appendChild(button);
+      card.appendChild(envelope);
+      card.appendChild(footer);
+      grid.appendChild(card);
+    });
+
+    updateMeta();
+  }
+
+  // Reset Button: reset BOTH coins and letter purchases
+  document.getElementById('reset').addEventListener('click', () => {
+    if (confirm('reset progress? (coins and letters will reset)')) {
+      localStorage.removeItem('ldg_coins');
+      localStorage.removeItem('ldg_purchases');
+      location.reload();
+    }
+  });
+
+  // Keep HUD and buy buttons responsive if coins change from other tabs/pages
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ldg_coins') {
+      const hud=document.getElementById('coinCount');
+      if (hud) hud.textContent = String(parseInt(localStorage.getItem('ldg_coins')||'0',10));
+      // re-render to refresh button disabled states
+      render();
+    }
+  });
+
+  // Initial render
+  render();
+})();
+</script>
+
+<script>
+  (function(){
+    function u(){ var el=document.getElementById('coinCount'); if(el){ el.textContent=String(parseInt(localStorage.getItem('ldg_coins')||'0',10)); } }
+    u(); window.addEventListener('storage', u);
+  })();
+</script>
+</body>
+</html>
